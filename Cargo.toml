@@ -1,0 +1,15 @@
+[package]
+
+name = "rsfchat"
+version = "0.0.1"
+authors = ["Effnote <effnote@gmail.com>"]
+
+[dependencies]
+rustc-serialize = "0.1.0"
+hyper = "*"
+
+[dependencies.websocket]
+git = "https://github.com/cyderize/rust-websocket"
+
+[dependencies.toml]
+git = "https://github.com/alexcrichton/toml-rs"
