@@ -1,6 +1,6 @@
-use std::comm::Sender;
+use std::sync::mpsc::Sender;
 
-#[deriving(Show)]
+#[derive(Show)]
 pub enum ServerMessage {
     Other { kind: [u8; 3], contents: String }
 }
@@ -27,7 +27,7 @@ macro_rules! impl_msg {
 }
 
 pub mod out {
-    #[deriving(RustcEncodable)]
+    #[derive(RustcEncodable)]
     pub struct IDN<'a> {
         pub method: &'a str,
         pub account: &'a str,

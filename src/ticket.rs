@@ -3,7 +3,7 @@ use url::percent_encoding::{utf8_percent_encode_to, FORM_URLENCODED_ENCODE_SET};
 use rustc_serialize::json;
 use config::Config;
 
-#[deriving(RustcDecodable, Show)]
+#[derive(RustcDecodable, Show)]
 pub struct Ticket {
     pub characters: Vec<String>,
     pub default_character: String,

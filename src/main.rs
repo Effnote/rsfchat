@@ -9,6 +9,7 @@ extern crate hyper;
 use std::thread::Thread;
 use std::time::Duration;
 use std::io::timer::sleep;
+use std::sync::mpsc::channel;
 
 use url::Url;
 use websocket::{WebSocketRequest, WebSocketMessage};

@@ -3,12 +3,12 @@ use std::io::File;
 
 use super::toml;
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 struct TopLevel {
     user_info: Config,
 }
 
-#[deriving(RustcDecodable)]
+#[derive(RustcDecodable)]
 pub struct Config {
     pub username: String,
     pub password: String,

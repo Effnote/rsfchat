@@ -1,3 +1,5 @@
+use std::sync::mpsc::Receiver;
+
 use message::{ServerMessage, ClientMessage};
 
 use config::Config;
