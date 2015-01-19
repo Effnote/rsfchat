@@ -7,7 +7,7 @@ pub enum ServerMessage {
 
 pub fn handle(text: String, tx: &Sender<ServerMessage>) {
     let mut kind = [0; 3];
-    ::std::slice::bytes::copy_memory(&mut kind, text.as_bytes()[..3]);
+    ::std::slice::bytes::copy_memory(&mut kind, &text.as_bytes()[..3]);
     tx.send(ServerMessage::Other { kind: kind, contents: text });
 }
 

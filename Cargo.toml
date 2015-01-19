@@ -7,6 +7,7 @@ authors = ["Effnote <effnote@gmail.com>"]
 [dependencies]
 rustc-serialize = "*"
 hyper = "*"
+url = "*"
 
 [dependencies.websocket]
 git = "https://github.com/cyderize/rust-websocket"

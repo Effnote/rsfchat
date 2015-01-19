@@ -18,6 +18,6 @@ pub fn start(rx: Receiver<ServerMessage>, config: Config, ticket: Ticket, mut cl
     }.send(&mut client);
 
     for msg in rx.iter() {
-        println!("{}", msg);
+        println!("{:?}", msg);
     }
 }

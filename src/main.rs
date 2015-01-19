@@ -1,4 +1,4 @@
-#![feature(slicing_syntax, macro_rules)]
+#![feature(slicing_syntax)]
 
 extern crate url;
 extern crate websocket;
@@ -38,7 +38,7 @@ fn main() {
                     _ => {}
                 }
             }
-        }).detach()
+        });
     }
 
     {
@@ -48,7 +48,7 @@ fn main() {
                 client.send_message(WebSocketMessage::Text(String::from_str("PIN")));
                 sleep(Duration::seconds(35));
             }
-        }).detach()
+        });
     }
 
     ui::start(received_rx, config, ticket, client);
