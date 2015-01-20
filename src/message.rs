@@ -15,8 +15,15 @@ pub trait ClientMessage {
     fn send(self, client: &mut ::websocket::client::WebSocketLocalClient);
 }
 
-macro_rules! impl_msg {
-    ($name: ident) => {
+macro_rules! create_struct {
+    ($name: ident, $($fields: ident),+ ) => {
+        #[derive(RustcEncodable)]
+        pub struct $name<'a> {
+            $(
+                pub $fields: &'a str,
+            )+
+        }
+
         impl<'a> ::message::ClientMessage for $name<'a> {
             fn send(self, client: &mut ::websocket::client::WebSocketLocalClient) {
                 let message = format!("{} {}", stringify!($name), ::rustc_serialize::json::encode(&self));
@@ -27,15 +34,7 @@ macro_rules! impl_msg {
 }
 
 pub mod out {
-    #[derive(RustcEncodable)]
-    pub struct IDN<'a> {
-        pub method: &'a str,
-        pub account: &'a str,
-        pub ticket: &'a str,
-        pub character: &'a str,
-        pub cname: &'a str,
-        pub cversion: &'a str,
-    }
-
-    impl_msg!(IDN);
+    create_struct!(IDN, method, account, ticket, character, cname, cversion);
+    create_struct!(MSG, channel, message);
+    create_struct!(RLL, channel, dice);
 }
