@@ -29,27 +29,27 @@ fn main() {
     let client = response.begin();
 
     let (received_tx, received_rx) = channel();
-    {
+    Thread::spawn({
         let mut client = client.clone();
-        Thread::spawn(move|| {
+        move|| {
             for msg in client.incoming_messages() {
                 match msg.unwrap() {
                     WebSocketMessage::Text(text) => message::handle(text, &received_tx),
                     _ => {}
                 }
             }
-        });
-    }
+        }
+    });
 
-    {
+    Thread::spawn({
         let mut client = client.clone();
-        Thread::spawn(move|| -> () {
+        move|| -> () {
             loop {
                 client.send_message(WebSocketMessage::Text(String::from_str("PIN")));
                 sleep(Duration::seconds(35));
             }
-        });
-    }
+        }
+    });
 
     ui::start(received_rx, config, ticket, client);
 }
