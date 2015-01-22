@@ -32,10 +32,9 @@ fn main() {
     Thread::spawn({
         let mut client = client.clone();
         move|| {
-            for msg in client.incoming_messages() {
-                match msg.unwrap() {
-                    WebSocketMessage::Text(text) => message::handle(text, &received_tx),
-                    _ => {}
+            for msg in client.incoming_messages().unwrap() {
+                if let WebSocketMessage::Text(text) = msg {
+                    message::handle(text, &received_tx);
                 }
             }
         }
