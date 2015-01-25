@@ -11,8 +11,7 @@ use WsSender;
 mod input;
 
 struct UI {
-    open_tabs: Vec<tabs::Tab>,
-    current_tab: Option<u16>,
+    open_tabs: tabs::Tabs,
     config: Config,
     ticket: Ticket,
     sender: WsSender,
@@ -20,8 +19,7 @@ struct UI {
 
 pub fn start(rx: Receiver<ServerMessage>, config: Config, ticket: Ticket, sender: WsSender) {
     let mut ui_data = UI {
-        open_tabs: vec![], //TODO Status
-        current_tab: None,
+        open_tabs: tabs::Tabs::new(),
         config: config,
         ticket: ticket,
         sender: sender,
@@ -48,15 +46,12 @@ pub fn start(rx: Receiver<ServerMessage>, config: Config, ticket: Ticket, sender
 
 fn perform(ui: &mut UI, line: String) {
     use ui::input::Action::*;
-    let UI { ref mut current_tab, ref mut open_tabs, ref mut sender, ..} = *ui;
+    let UI { ref mut open_tabs, ref mut sender, ..} = *ui;
     match input::parse(&*line) {
         Message { content } => {
-            if let Some(target) = current_tab.and_then(|x| open_tabs.get_mut(x as usize)) {
-                target.send_message(sender, content)
-                    .err().map(|e| println!("Error: {}", e));
-            } else {
-                println!("Error: No tabs are open.");
-            }
+            let target = open_tabs.get_current();
+            target.send_message(sender, content)
+                .err().map(|e| println!("Error: {}", e));
         }
         Join { room } => { // TODO
             unimplemented!();
