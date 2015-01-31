@@ -13,9 +13,9 @@ pub struct Ticket {
 pub fn get_ticket(config: &Config) -> Ticket {
     let mut client = hyper::Client::new();
     let mut body = "account=".to_string();
-    utf8_percent_encode_to(&*config.username, FORM_URLENCODED_ENCODE_SET, &mut body);
+    utf8_percent_encode_to(&*config.user_info.username, FORM_URLENCODED_ENCODE_SET, &mut body);
     body.push_str("&password=");
-    utf8_percent_encode_to(&*config.password, FORM_URLENCODED_ENCODE_SET, &mut body);
+    utf8_percent_encode_to(&*config.user_info.password, FORM_URLENCODED_ENCODE_SET, &mut body);
     let mime = "application/x-www-form-urlencoded".parse().unwrap();
     let mut response = client.post("http://www.f-list.net/json/getApiTicket.php")
         .body(body.as_slice())

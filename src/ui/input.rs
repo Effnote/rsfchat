@@ -1,9 +1,13 @@
 use std::sync::mpsc::Sender;
 
 pub fn get_input(tx: Sender<String>) {
-    let mut stdin = ::std::io::stdin();
+    let mut stdin = ::std::old_io::stdin();
     loop {
-        tx.send(stdin.read_line().unwrap()).unwrap();
+        let mut line = stdin.read_line().unwrap();
+        if line.chars().rev().nth(0).map_or(false, |x| x == '\n') {
+            line.pop();
+        }
+        tx.send(line).unwrap();
     }
 }
 
@@ -13,9 +17,9 @@ pub fn parse(line: &str) -> Action {
     } else {
         if let Some(action) = line[1..].split(' ').nth(0) {
             match action {
-                "join" => {
-                    if let Some(room) = line.splitn(1, ' ').nth(1) {
-                        Action::Join { room: room }
+                "priv" => {
+                    if let Some(character) = line.splitn(1, ' ').nth(1) {
+                        Action::Priv { character: character }
                     } else {
                         Action::Error { error: "/join expects a room name." }
                     }

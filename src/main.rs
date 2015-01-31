@@ -6,10 +6,11 @@ extern crate websocket;
 extern crate toml;
 extern crate "rustc-serialize" as rustc_serialize;
 extern crate hyper;
+extern crate time;
 
 use std::thread::Thread;
 use std::time::Duration;
-use std::io::timer::sleep;
+use std::old_io::timer::sleep;
 use std::sync::mpsc::channel;
 use std::borrow::ToOwned;
 

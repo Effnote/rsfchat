@@ -1,5 +1,6 @@
 use std::sync::mpsc::{Receiver, channel};
 use std::thread::Thread;
+use std::borrow::ToOwned;
 
 use message::{ServerMessage, ClientMessage, out};
 
@@ -18,17 +19,19 @@ struct UI {
 }
 
 pub fn start(rx: Receiver<ServerMessage>, config: Config, ticket: Ticket, sender: WsSender) {
+    use tabs::messages::Message;
+    let formatter = |&:| -> Box<Fn(&Message) -> String>  Box::new(|message| format!("{}", message.contents)); // TODO
     let mut ui_data = UI {
-        open_tabs: tabs::Tabs::new(),
+        open_tabs: tabs::Tabs::new(&config, formatter),
         config: config,
         ticket: ticket,
         sender: sender,
     };
     out::IDN {
         method: "ticket",
-        account: &*ui_data.config.username,
+        account: &*ui_data.config.user_info.username,
         ticket: &*ui_data.ticket.ticket,
-        character: &*ui_data.config.character,
+        character: &*ui_data.config.user_info.character,
         cname: "RSFChat",
         cversion: "0.0.1"
     }.send(&mut ui_data.sender);
@@ -46,18 +49,24 @@ pub fn start(rx: Receiver<ServerMessage>, config: Config, ticket: Ticket, sender
 
 fn perform(ui: &mut UI, line: String) {
     use ui::input::Action::*;
+    use tabs::messages::MessageType::*;
     let UI { ref mut open_tabs, ref mut sender, ..} = *ui;
     match input::parse(&*line) {
-        Message { content } => {
+        Message { mut content } => {
             let target = open_tabs.get_current();
-            target.send_message(sender, content)
+            if let Err(err) = target {
+                println!("Error: {}", err);
+                return;
+            }
+            let mut target = target.unwrap();
+            target.send_message(sender, Normal { from: ui.config.user_info.character.to_owned() }, content)
                 .err().map(|e| println!("Error: {}", e));
         }
-        Join { room } => { // TODO
-            unimplemented!();
+        Join { room } => {
+            open_tabs.add_tab(room, false);
         }
-        Priv { character } => { // TODO
-            unimplemented!();
+        Priv { character } => {
+            open_tabs.add_tab(character, true);
         }
         Error { error } => {
             println!("Error: {}", error);
