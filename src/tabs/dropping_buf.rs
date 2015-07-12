@@ -1,10 +1,10 @@
-use std::collections::RingBuf;
+use std::collections::VecDeque;
 
-pub struct DroppingBuf<T>(RingBuf<T>);
+pub struct DroppingBuf<T>(VecDeque<T>);
 
 impl<T> DroppingBuf<T> {
     pub fn with_capacity(capacity: u16) -> DroppingBuf<T> {
-        DroppingBuf(RingBuf::with_capacity(capacity as usize))
+        DroppingBuf(VecDeque::with_capacity(capacity as usize))
     }
 
     pub fn insert(&mut self, elem: T) {
@@ -26,8 +26,12 @@ impl<T> DroppingBuf<T> {
             self.0.shrink_to_fit();
         }
     }
+}
 
-    pub fn iter(&self) -> ::std::collections::ring_buf::Iter<T> {
-        self.0.iter()
+impl<T> ::std::ops::Deref for DroppingBuf<T> {
+    type Target = VecDeque<T>;
+    
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }

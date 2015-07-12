@@ -1,9 +1,10 @@
 use std::sync::mpsc::Sender;
 
 pub fn get_input(tx: Sender<String>) {
-    let mut stdin = ::std::old_io::stdin();
+    let mut stdin = ::std::io::stdin();
     loop {
-        let mut line = stdin.read_line().unwrap();
+        let mut line = String::new();
+        stdin.read_line(&mut line).unwrap();
         if line.chars().rev().nth(0).map_or(false, |x| x == '\n') {
             line.pop();
         }

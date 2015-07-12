@@ -1,5 +1,6 @@
 use std::path::Path;
-use std::old_io::File;
+use std::fs::File;
+use std::io::Read;
 
 use super::toml;
 
@@ -16,7 +17,7 @@ pub struct UserInfo {
     pub character: String,
 }
 
-#[derive(RustcDecodable, Copy)]
+#[derive(RustcDecodable, Copy, Clone)]
 pub struct Settings {
     pub buffer_size: u16,
 }
@@ -31,8 +32,9 @@ pub struct Config {
 }
 
 pub fn read_config(path: &str) -> Config {
-    let contents = File::open(&Path::new(path)).read_to_string().unwrap();
-    let top_level: TopLevel = toml::decode_str(contents.as_slice()).unwrap();
+    let mut contents = String::new();
+    File::open(path).unwrap().read_to_string(&mut contents).unwrap();
+    let top_level: TopLevel = toml::decode_str(&contents).unwrap();
     let TopLevel { user_info, settings } = top_level;
     Config {
         user_info: user_info,

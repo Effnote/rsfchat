@@ -1,8 +1,8 @@
 use std::borrow::ToOwned;
-use std::collections::{HashMap, RingBuf};
+use std::collections::{HashMap, VecDeque};
 use std::rc::Rc;
 
-use message::{ClientMessage, out};
+use message::{ServerMessage, ClientMessage, out};
 use config::{self, Config};
 use WsSender;
 
@@ -31,6 +31,7 @@ struct PrivateTab {
 pub trait Tab {
     fn send_message(&mut self, sender: &mut WsSender, kind: MessageType, message: &str) -> Result<(), &'static str>;
     fn get_mut_log(&mut self) -> &mut Log;
+    fn get_log(&self) -> &Log;
     fn add_message(&mut self, kind: MessageType, message: &str) {
         self.get_mut_log().add_message(kind, message);
     }
@@ -43,6 +44,10 @@ impl Tab for StatusTab {
 
     fn get_mut_log(&mut self) -> &mut Log {
         &mut self.messages
+    }
+
+    fn get_log(&self) -> &Log {
+        &self.messages
     }
 }
 
@@ -59,6 +64,10 @@ impl Tab for ChannelTab {
     fn get_mut_log(&mut self) -> &mut Log {
         &mut self.messages
     }
+
+    fn get_log(&self) -> &Log {
+        &self.messages
+    }
 }
 
 impl Tab for PrivateTab {
@@ -73,6 +82,10 @@ impl Tab for PrivateTab {
 
     fn get_mut_log(&mut self) -> &mut Log {
         &mut self.messages
+    }
+
+    fn get_log(&self) -> &Log {
+        &self.messages
     }
 }
 
@@ -179,5 +192,13 @@ impl Tabs {
         };
         self.tab_order.push(kind);
         self.current_tab = self.tab_order.len() as u16;
+    }
+
+    pub fn dispatch(&mut self, msg: ServerMessage) {
+        use message::ServerMessage::*;
+        /*
+        match msg {
+        }
+        */
     }
 }

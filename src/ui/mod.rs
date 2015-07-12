@@ -1,5 +1,5 @@
 use std::sync::mpsc::{Receiver, channel};
-use std::thread::Thread;
+use std::thread;
 use std::borrow::ToOwned;
 
 use message::{ServerMessage, ClientMessage, out};
@@ -20,7 +20,7 @@ struct UI {
 
 pub fn start(rx: Receiver<ServerMessage>, config: Config, ticket: Ticket, sender: WsSender) {
     use tabs::messages::Message;
-    let formatter = |&:| -> Box<Fn(&Message) -> String>  Box::new(|message| format!("{}", message.contents)); // TODO
+    let formatter = || -> Box<Fn(&Message) -> String> { Box::new(|message| format!("{}", message.contents)) }; // TODO
     let mut ui_data = UI {
         open_tabs: tabs::Tabs::new(&config, formatter),
         config: config,
@@ -37,13 +37,27 @@ pub fn start(rx: Receiver<ServerMessage>, config: Config, ticket: Ticket, sender
     }.send(&mut ui_data.sender);
 
     let (input_tx, input_rx) = channel();
-    Thread::spawn(move|| input::get_input(input_tx));
+    thread::spawn(move|| input::get_input(input_tx));
 
     loop {
         select! {
-            line = input_rx.recv() => { perform(&mut ui_data, line.unwrap()) },
-            msg = rx.recv() => { println!("{:?}", msg.unwrap()); }
+            line = input_rx.recv() => {
+                perform(&mut ui_data, line.unwrap());
+            },
+            msg = rx.recv() => {
+                let msg = msg.unwrap();
+                ui_data.open_tabs.dispatch(msg);
+            }
         }
+        refresh(&mut ui_data);
+    }
+}
+
+fn refresh(ui: &mut UI) {
+    let current_tab = ui.open_tabs.get_current().unwrap();
+    let text = &current_tab.get_log().display_buffer;
+    for i in text.len().saturating_sub(12)..text.len() {
+        println!("{}", text[i]);
     }
 }
 

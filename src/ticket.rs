@@ -2,8 +2,9 @@ use super::hyper;
 use url::percent_encoding::{utf8_percent_encode_to, FORM_URLENCODED_ENCODE_SET};
 use rustc_serialize::json;
 use config::Config;
+use std::io::Read;
 
-#[derive(RustcDecodable, Show)]
+#[derive(RustcDecodable, Debug)]
 pub struct Ticket {
     pub characters: Vec<String>,
     pub default_character: String,
@@ -18,10 +19,11 @@ pub fn get_ticket(config: &Config) -> Ticket {
     utf8_percent_encode_to(&*config.user_info.password, FORM_URLENCODED_ENCODE_SET, &mut body);
     let mime = "application/x-www-form-urlencoded".parse().unwrap();
     let mut response = client.post("http://www.f-list.net/json/getApiTicket.php")
-        .body(body.as_slice())
+        .body(&body)
         .header(hyper::header::ContentType(mime))
         .send().unwrap();
-    let response = response.read_to_string().unwrap();
-    let ticket: Ticket = json::decode(response.as_slice()).unwrap(); // TODO: Handle the possibility of an response with an error.
+    let mut response_string = String::new();
+    response.read_to_string(&mut response_string).unwrap();
+    let ticket: Ticket = json::decode(&response_string).unwrap(); // TODO: Handle the possibility of an response with an error.
     ticket
 }

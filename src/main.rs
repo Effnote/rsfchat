@@ -1,18 +1,19 @@
 #![feature(slicing_syntax)]
-#![allow(unstable)]
+#![feature(mpsc_select)]
+#![feature(deque_extras)]
+#![feature(collections)]
 
 extern crate url;
 extern crate websocket;
 extern crate toml;
-extern crate "rustc-serialize" as rustc_serialize;
+extern crate rustc_serialize;
 extern crate hyper;
 extern crate time;
 
-use std::thread::Thread;
-use std::time::Duration;
-use std::old_io::timer::sleep;
+use std::thread::sleep_ms;
 use std::sync::mpsc::channel;
 use std::borrow::ToOwned;
+use std::thread;
 
 use url::Url;
 use websocket::{Client, Sender, Receiver, Message};
@@ -23,7 +24,7 @@ mod config;
 mod ticket;
 mod tabs;
 
-type WsSender = std::sync::mpsc::Sender<String>;
+pub type WsSender = std::sync::mpsc::Sender<String>;
 
 fn main() {
     let config = config::read_config("config.toml");
@@ -35,7 +36,7 @@ fn main() {
     let (mut sender, mut receiver) = response.begin().split();
 
     let (received_tx, received_rx) = channel();
-    Thread::spawn(move|| {
+    thread::spawn(move|| {
         for msg in receiver.incoming_messages() {
             let msg = msg.unwrap();
             if let Message::Text(text) = msg {
@@ -45,18 +46,18 @@ fn main() {
     });
 
     let (sender_tx, sender_rx) = channel();
-    Thread::spawn(move|| {
+    thread::spawn(move|| {
         for msg in sender_rx.iter() {
             sender.send_message(Message::Text(msg)).unwrap();
         }
     });
 
-    Thread::spawn({
+    thread::spawn({
         let sender = sender_tx.clone();
         move|| -> () {
             loop {
                 sender.send("PIN".to_owned()).unwrap();
-                sleep(Duration::seconds(35));
+                sleep_ms(35*1000); // 35 seconds
             }
         }
     });

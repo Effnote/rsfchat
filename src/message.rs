@@ -1,14 +1,16 @@
 use std::sync::mpsc::Sender as CSender;
 use WsSender;
 
-#[derive(Show)]
+#[derive(Debug)]
 pub enum ServerMessage {
-    Other { kind: [u8; 3], contents: String }
+    Other { kind: [u8; 3], contents: String },
 }
 
 pub fn handle(text: String, tx: &CSender<ServerMessage>) {
     let mut kind = [0; 3];
-    ::std::slice::bytes::copy_memory(&mut kind, &text.as_bytes()[..3]);
+    for (i, &x) in text.as_bytes()[..3].iter().enumerate() {
+        kind[i] = x;
+    }
     tx.send(ServerMessage::Other { kind: kind, contents: text }).unwrap();
 }
 
