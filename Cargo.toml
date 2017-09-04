@@ -1,17 +1,13 @@
 [package]
-
+authors = ["Effnote <effnote@gmail.com>"]
 name = "rsfchat"
 version = "0.0.1"
-authors = ["Effnote <effnote@gmail.com>"]
 
 [dependencies]
-rustc-serialize = "*"
-hyper = "*"
-url = "*"
-time = "*"
+cursive = "0.6.4"
+futures = "0.1.15"
+serde = "1.0.11"
+tokio-core = "0.1.9"
 
-[dependencies.websocket]
-git = "https://github.com/cyderize/rust-websocket"
-
-[dependencies.toml]
-git = "https://github.com/alexcrichton/toml-rs"
+[dependencies.fchat]
+path = "../libfchat/"
