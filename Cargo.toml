@@ -4,10 +4,11 @@ name = "rsfchat"
 version = "0.0.1"
 
 [dependencies]
-cursive = "0.6.4"
+cursive = "0.7.0"
 futures = "0.1.15"
 serde = "1.0.11"
-tokio-core = "0.1.9"
+tokio-core = "0.1.10"
+tokio-timer = "0.1.2"
 
 [dependencies.fchat]
 git = "https://github.com/effnote/libfchat"
