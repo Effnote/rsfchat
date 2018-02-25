@@ -1,13 +1,13 @@
 extern crate cursive;
+extern crate failure;
 extern crate fchat;
 extern crate futures;
 extern crate tokio_core;
 extern crate tokio_timer;
 
 mod ui;
-mod config;
-mod controller;
+mod io;
 
 fn main() {
-    controller::start().unwrap();
+    io::start().unwrap();
 }
