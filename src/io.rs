@@ -50,6 +50,7 @@ impl NetworkController {
 
     fn connect(&mut self, server: Server, ticket: fchat::Ticket, character: String) {
         self.character = Some(character.clone());
+        self.server = Some(server.clone());
         let (connection_tx, internal_rx) = futures::sync::mpsc::channel(32);
         self.fchat_tx = Some(connection_tx);
         let handle = self.handle.clone();
@@ -90,11 +91,28 @@ impl NetworkController {
 }
 
 fn step(
-    controller: NetworkController,
+    mut controller: NetworkController,
     event: Event,
 ) -> Box<Future<Item = NetworkController, Error = ()>> {
-    let future = futures::future::ok(controller);
-    Box::new(future)
+    match event {
+        Event::Connect {
+            server,
+            ticket,
+            character,
+        } => {
+            controller.connect(server, ticket, character);
+        }
+        Event::ReceivedMessage(message) => {
+            controller
+                .ui_sender
+                .send(ui::Event::ReceivedMessage(message))
+                .expect("Failed to send message to UI");
+        }
+        Event::SendMessage(_message) => {
+            unimplemented!();
+        }
+    }
+    Box::new(futures::future::ok(controller))
 }
 
 pub fn start() -> Result<(), Error> {

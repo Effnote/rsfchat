@@ -4,7 +4,8 @@ name = "rsfchat"
 version = "0.0.1"
 
 [dependencies]
-cursive = "0.7.0"
+chrono = "0.4.0"
+cursive = "0.8.0"
 failure = "0.1.1"
 futures = "0.1.15"
 serde = "1.0.11"

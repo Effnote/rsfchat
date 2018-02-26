@@ -1,3 +1,4 @@
+extern crate chrono;
 extern crate cursive;
 extern crate failure;
 extern crate fchat;

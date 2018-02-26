@@ -1,5 +1,8 @@
 use cursive::{self, views, Cursive};
+use cursive::traits::{Boxable, Identifiable};
 use fchat::{self, Ticket};
+
+use chrono::{self, Timelike};
 
 use futures::sync::mpsc::UnboundedSender;
 
@@ -10,7 +13,7 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use io;
 
 pub enum Event {
-    NetEvent(io::Event),
+    ReceivedMessage(fchat::message::server::Message),
     TextInput(String),
 }
 
@@ -70,10 +73,41 @@ impl Controller {
                         .unwrap();
                     next_state = Some(State::Connecting);
                 }
-                Err(TryRecvError::Empty) => {},
-                Err(TryRecvError::Disconnected) => unimplemented!(),
+                Err(TryRecvError::Empty) => {}
+                Err(TryRecvError::Disconnected) => {
+                    panic!("ui login_rx disconnected");
+                }
             },
-            _ => unimplemented!(),
+            State::Connecting => {
+                debug_view(&mut self.siv);
+                next_state = Some(State::Connected);
+            }
+            State::Connected => match self.event_rx.try_recv() {
+                Ok(Event::ReceivedMessage(message)) => {
+                    self.siv
+                        .call_on_id("debug_view", |view: &mut views::TextView| {
+                            let now = chrono::Local::now();
+                            let hour = now.hour();
+                            let minute = now.minute();
+                            let second = now.second();
+                            view.append(format!(
+                                "[{}:{}:{}] {:?}\n",
+                                hour, minute, second, message
+                            ));
+                        });
+                }
+                Ok(_) => {}
+                Err(TryRecvError::Empty) => {}
+                Err(TryRecvError::Disconnected) => {
+                    panic!("ui event_rx disconnected");
+                }
+            },
+            State::Disconnected => {
+                panic!("State::Disconnected");
+            }
+            State::Quit => {
+                self.is_running = false;
+            }
         }
         if let Some(state) = next_state {
             self.state = state;
@@ -118,13 +152,18 @@ fn select_character(siv: &mut Cursive, result: Sender<(Ticket, String)>) {
     siv.pop_layer();
     let mut characters = views::SelectView::new();
     characters.add_all_str(ticket.characters().iter().cloned());
-    characters.set_on_submit::<_, str>(move |siv, character| {
+    characters.set_on_submit::<_, (), str>(move |siv, character| {
         result
             .send((ticket.clone(), String::from(character)))
             .unwrap();
         siv.pop_layer();
     });
     siv.add_layer(characters);
+}
+
+fn debug_view(siv: &mut Cursive) {
+    let textview = views::TextView::empty().with_id("debug_view").full_screen();
+    siv.add_layer(textview);
 }
 
 pub fn start(net_tx: UnboundedSender<io::Event>) -> Sender<Event> {
