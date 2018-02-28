@@ -79,24 +79,30 @@ impl Controller {
                 }
             },
             State::Connecting => {
-                debug_view(&mut self.siv);
+                std::thread::sleep(std::time::Duration::from_secs(5));
+                let message = fchat::message::client::Message::JCH {
+                    channel: String::from("Development"),
+                };
+                self.net_tx
+                    .unbounded_send(io::Event::SendMessage(message))
+                    .unwrap();
+                debug_view(&mut self.siv, self.event_tx.clone());
                 next_state = Some(State::Connected);
             }
             State::Connected => match self.event_rx.try_recv() {
                 Ok(Event::ReceivedMessage(message)) => {
-                    self.siv
-                        .call_on_id("debug_view", |view: &mut views::TextView| {
-                            let now = chrono::Local::now();
-                            let hour = now.hour();
-                            let minute = now.minute();
-                            let second = now.second();
-                            view.append(format!(
-                                "[{}:{}:{}] {:?}\n",
-                                hour, minute, second, message
-                            ));
-                        });
+                    debug_message(&mut self.siv, message);
                 }
-                Ok(_) => {}
+                Ok(Event::TextInput(text)) => {
+                    let message = fchat::message::client::Message::MSG {
+                        channel: String::from("Development"),
+                        message: text.clone(),
+                    };
+                    self.net_tx
+                        .unbounded_send(io::Event::SendMessage(message))
+                        .unwrap();
+                    debug_message(&mut self.siv, text);
+                }
                 Err(TryRecvError::Empty) => {}
                 Err(TryRecvError::Disconnected) => {
                     panic!("ui event_rx disconnected");
@@ -161,9 +167,35 @@ fn select_character(siv: &mut Cursive, result: Sender<(Ticket, String)>) {
     siv.add_layer(characters);
 }
 
-fn debug_view(siv: &mut Cursive) {
-    let textview = views::TextView::empty().with_id("debug_view").full_screen();
-    siv.add_layer(textview);
+fn debug_view(siv: &mut Cursive, event_tx: Sender<Event>) {
+    let textview = views::TextView::empty()
+        .scroll_strategy(cursive::view::ScrollStrategy::StickToBottom)
+        .with_id("debug_view")
+        .full_screen();
+    let input = views::EditView::new()
+        .on_submit(move |siv, text| {
+            event_tx.send(Event::TextInput(String::from(text))).unwrap();
+            siv.call_on_id("input", |input: &mut views::EditView| input.set_content(""));
+        })
+        .with_id("input");
+    let layer = views::LinearLayout::vertical()
+        .child(textview)
+        .child(input)
+        .full_screen();
+    siv.add_layer(layer);
+}
+
+fn debug_message<M: std::fmt::Debug>(siv: &mut Cursive, message: M) {
+    siv.call_on_id("debug_view", |view: &mut views::TextView| {
+        let now = chrono::Local::now();
+        let hour = now.hour();
+        let minute = now.minute();
+        let second = now.second();
+        view.append(format!(
+            "[{:02}:{:02}:{:02}] {:?}\n",
+            hour, minute, second, message
+        ));
+    });
 }
 
 pub fn start(net_tx: UnboundedSender<io::Event>) -> Sender<Event> {

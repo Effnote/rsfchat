@@ -108,8 +108,16 @@ fn step(
                 .send(ui::Event::ReceivedMessage(message))
                 .expect("Failed to send message to UI");
         }
-        Event::SendMessage(_message) => {
-            unimplemented!();
+        Event::SendMessage(message) => {
+            if let Some(fchat_tx) = controller.fchat_tx.take() {
+                let future = fchat_tx.send(message).map_err(|_err| ()).and_then(|sink| {
+                    controller.fchat_tx = Some(sink);
+                    Ok(controller)
+                });
+                return Box::new(future);
+            } else {
+                panic!("Tried to send message, but not connected to the server")
+            }
         }
     }
     Box::new(futures::future::ok(controller))
