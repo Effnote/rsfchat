@@ -4,7 +4,7 @@ use std::time::Duration;
 use fchat::{self, Server};
 
 use tokio_core::reactor::{Core, Handle};
-use tokio_timer::Timer;
+use tokio_timer::Interval;
 
 use futures::{self, Future, Sink, Stream};
 use futures::sync::mpsc::{Sender, UnboundedSender};
@@ -78,8 +78,7 @@ impl NetworkController {
                         .forward(event_tx)
                         .then(|_| Ok(())),
                 );
-                let timer = Timer::default()
-                    .interval(Duration::from_secs(30))
+                let timer = Interval::new_interval(Duration::from_secs(30))
                     .map(|_| fchat::message::client::Message::PIN)
                     .map_err(|_| ());
                 sink.sink_map_err(|_| ())

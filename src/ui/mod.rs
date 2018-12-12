@@ -1,5 +1,5 @@
 use cursive::{self, views, Cursive};
-use cursive::traits::{Boxable, Identifiable};
+use cursive::traits::{Boxable, Identifiable, Scrollable};
 use fchat::{self, Ticket};
 
 use chrono::{self, Timelike};
@@ -41,7 +41,7 @@ impl Controller {
         event_tx: Sender<Event>,
         event_rx: Receiver<Event>,
     ) -> Controller {
-        let mut siv = cursive::Cursive::new();
+        let mut siv = cursive::Cursive::ncurses();
         siv.set_fps(30);
         Controller {
             is_running: true,
@@ -169,8 +169,9 @@ fn select_character(siv: &mut Cursive, result: Sender<(Ticket, String)>) {
 
 fn debug_view(siv: &mut Cursive, event_tx: Sender<Event>) {
     let textview = views::TextView::empty()
-        .scroll_strategy(cursive::view::ScrollStrategy::StickToBottom)
         .with_id("debug_view")
+        .scrollable()
+        .scroll_strategy(cursive::view::ScrollStrategy::StickToBottom)
         .full_screen();
     let input = views::EditView::new()
         .on_submit(move |siv, text| {
