@@ -1,5 +1,6 @@
 extern crate chrono;
 extern crate cursive;
+#[macro_use]
 extern crate failure;
 extern crate fchat;
 extern crate futures;

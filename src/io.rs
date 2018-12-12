@@ -93,7 +93,7 @@ impl NetworkController {
 fn step(
     mut controller: NetworkController,
     event: Event,
-) -> Box<Future<Item = NetworkController, Error = ()>> {
+) -> Box<Future<Item = NetworkController, Error = Error>> {
     match event {
         Event::Connect {
             server,
@@ -110,10 +110,13 @@ fn step(
         }
         Event::SendMessage(message) => {
             if let Some(fchat_tx) = controller.fchat_tx.take() {
-                let future = fchat_tx.send(message).map_err(|_err| ()).and_then(|sink| {
-                    controller.fchat_tx = Some(sink);
-                    Ok(controller)
-                });
+                let future = fchat_tx
+                    .send(message)
+                    .map_err(Error::from)
+                    .and_then(|sink| {
+                        controller.fchat_tx = Some(sink);
+                        Ok(controller)
+                    });
                 return Box::new(future);
             } else {
                 panic!("Tried to send message, but not connected to the server")
@@ -126,9 +129,11 @@ fn step(
 pub fn start() -> Result<(), Error> {
     let (event_tx, event_rx) = futures::sync::mpsc::unbounded();
     let ui_sender = ui::start(event_tx.clone());
-    let mut core = Core::new()?;
+    let mut core = Core::new().map_err(Error::from)?;
     let controller = NetworkController::new(core.handle(), ui_sender, event_tx);
-    let future = event_rx.fold(controller, step);
-    core.run(future).ok();
-    Ok(())
+    let future = event_rx
+        .map_err(|_| format_err!("event_rx error"))
+        .fold(controller, step)
+        .map(|_| ());
+    core.run(future)
 }
