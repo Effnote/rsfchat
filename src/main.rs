@@ -1,14 +1,8 @@
-extern crate chrono;
-extern crate cursive;
 #[macro_use]
 extern crate failure;
-extern crate fchat;
-extern crate futures;
-extern crate tokio_core;
-extern crate tokio_timer;
 
-mod ui;
 mod io;
+mod ui;
 
 fn main() {
     io::start().unwrap();

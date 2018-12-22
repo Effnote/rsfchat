@@ -1,5 +1,5 @@
-use cursive::{self, views, Cursive};
 use cursive::traits::{Boxable, Identifiable, Scrollable};
+use cursive::{self, views, Cursive};
 use fchat::{self, Ticket};
 
 use chrono::{self, Timelike};
@@ -7,10 +7,10 @@ use chrono::{self, Timelike};
 use futures::sync::mpsc::UnboundedSender;
 
 use std;
-use std::thread::spawn;
 use std::sync::mpsc::{channel, Receiver, Sender};
+use std::thread::spawn;
 
-use io;
+use crate::io;
 
 pub enum Event {
     ReceivedMessage(fchat::message::server::Message),
@@ -150,9 +150,11 @@ pub fn login_dialog(result: Sender<(Ticket, String)>) -> views::Dialog {
 }
 
 fn select_character(siv: &mut Cursive, result: Sender<(Ticket, String)>) {
-    let username = siv.call_on_id("username", |text: &mut views::EditView| text.get_content())
+    let username = siv
+        .call_on_id("username", |text: &mut views::EditView| text.get_content())
         .expect("Failed to find ID \"username\"");
-    let password = siv.call_on_id("password", |text: &mut views::EditView| text.get_content())
+    let password = siv
+        .call_on_id("password", |text: &mut views::EditView| text.get_content())
         .expect("Failed to find ID \"password\"");
     let ticket = Ticket::request(&username, &password).unwrap();
     siv.pop_layer();

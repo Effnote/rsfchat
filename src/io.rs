@@ -3,15 +3,14 @@ use std::time::Duration;
 
 use fchat::{self, Server};
 
-use tokio_core::reactor::{Core, Handle};
 use tokio_timer::Interval;
 
-use futures::{self, Future, Sink, Stream};
 use futures::sync::mpsc::{Sender, UnboundedSender};
+use futures::{self, Future, Sink, Stream};
 
 use failure::Error;
 
-use ui;
+use crate::ui;
 
 pub enum Event {
     Connect {
@@ -24,7 +23,6 @@ pub enum Event {
 }
 
 struct NetworkController {
-    handle: Handle,
     event_tx: UnboundedSender<Event>,
     ui_sender: std::sync::mpsc::Sender<ui::Event>,
     server: Option<Server>,
@@ -34,12 +32,10 @@ struct NetworkController {
 
 impl NetworkController {
     fn new(
-        handle: Handle,
         ui_sender: std::sync::mpsc::Sender<ui::Event>,
         event_tx: UnboundedSender<Event>,
     ) -> NetworkController {
         NetworkController {
-            handle,
             fchat_tx: None,
             event_tx,
             ui_sender,
@@ -50,13 +46,10 @@ impl NetworkController {
 
     fn connect(&mut self, server: Server, ticket: fchat::Ticket, character: String) {
         self.character = Some(character.clone());
-        self.server = Some(server.clone());
         let (connection_tx, internal_rx) = futures::sync::mpsc::channel(32);
         self.fchat_tx = Some(connection_tx);
-        let handle = self.handle.clone();
-        let handle2 = self.handle.clone();
         let event_tx = self.event_tx.clone();
-        let connection = fchat::connect(server, handle)
+        let connection = fchat::connect(&server)
             .and_then(move |(sink, stream)| {
                 (
                     fchat::identify(
@@ -71,7 +64,7 @@ impl NetworkController {
             })
             .map_err(|_| ())
             .and_then(move |(sink, stream)| {
-                handle2.spawn(
+                tokio::spawn(
                     stream
                         .map_err(Error::from)
                         .map(Event::ReceivedMessage)
@@ -85,14 +78,15 @@ impl NetworkController {
                     .send_all(timer.select(internal_rx))
                     .then(|_| Ok(()))
             });
-        self.handle.spawn(connection);
+        self.server = Some(server);
+        tokio::spawn(connection);
     }
 }
 
 fn step(
     mut controller: NetworkController,
     event: Event,
-) -> Box<Future<Item = NetworkController, Error = Error>> {
+) -> Box<Future<Item = NetworkController, Error = Error> + Send> {
     match event {
         Event::Connect {
             server,
@@ -128,11 +122,11 @@ fn step(
 pub fn start() -> Result<(), Error> {
     let (event_tx, event_rx) = futures::sync::mpsc::unbounded();
     let ui_sender = ui::start(event_tx.clone());
-    let mut core = Core::new().map_err(Error::from)?;
-    let controller = NetworkController::new(core.handle(), ui_sender, event_tx);
+    let controller = NetworkController::new(ui_sender, event_tx);
     let future = event_rx
         .map_err(|_| format_err!("event_rx error"))
         .fold(controller, step)
-        .map(|_| ());
-    core.run(future)
+        .then(|_| Ok(()));
+    tokio::run(future);
+    Ok(())
 }
