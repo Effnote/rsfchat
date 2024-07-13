@@ -1,16 +1,14 @@
-use std;
 use std::time::Duration;
 
 use fchat::{self, Server};
 
-use tokio_timer::Interval;
+use futures::channel::mpsc::{Sender, UnboundedSender};
+use futures::prelude::*;
 
-use futures::sync::mpsc::{Sender, UnboundedSender};
-use futures::{self, Future, Sink, Stream};
-
-use failure::Error;
+use tokio::time::interval;
 
 use crate::ui;
+use crate::Error;
 
 pub enum Event {
     Connect {
@@ -46,47 +44,35 @@ impl NetworkController {
 
     fn connect(&mut self, server: Server, ticket: fchat::Ticket, character: String) {
         self.character = Some(character.clone());
-        let (connection_tx, internal_rx) = futures::sync::mpsc::channel(32);
+        let (connection_tx, internal_rx) = futures::channel::mpsc::channel(32);
         self.fchat_tx = Some(connection_tx);
         let event_tx = self.event_tx.clone();
-        let connection = fchat::connect(&server)
-            .and_then(move |(sink, stream)| {
-                (
-                    fchat::identify(
-                        sink,
-                        &ticket,
-                        character,
-                        "RSFChat".to_owned(),
-                        "0.0.1".to_owned(),
-                    ),
-                    Ok(stream),
-                )
-            })
-            .map_err(|_| ())
-            .and_then(move |(sink, stream)| {
-                tokio::spawn(
-                    stream
-                        .map_err(Error::from)
-                        .map(Event::ReceivedMessage)
-                        .forward(event_tx)
-                        .then(|_| Ok(())),
-                );
-                let timer = Interval::new_interval(Duration::from_secs(30))
-                    .map(|_| fchat::message::client::Message::PIN)
-                    .map_err(|_| ());
-                sink.sink_map_err(|_| ())
-                    .send_all(timer.select(internal_rx))
-                    .then(|_| Ok(()))
+        self.server = Some(server.clone());
+        let connection_future = async move {
+            let mut connection = fchat::Connection::connect(&server).await?;
+            connection
+                .identify(&ticket, character, "RSFChat".to_owned(), "0.0.2".to_owned())
+                .await?;
+            let (mut sink, stream) = connection.split();
+            tokio::spawn(async move {
+                event_tx
+                    .sink_map_err(Error::from)
+                    .send_all(&mut stream.map_ok(Event::ReceivedMessage).map_err(Error::from))
+                    .await
             });
-        self.server = Some(server);
-        tokio::spawn(connection);
+            let ping =
+                interval(Duration::from_secs(30)).map(|_| fchat::message::client::Message::PIN);
+            let mut outgoing_messages = futures::stream::select(internal_rx, ping);
+            while let Some(message) = outgoing_messages.next().await {
+                sink.send(message).await?;
+            }
+            Ok::<(), Error>(())
+        };
+        tokio::spawn(connection_future);
     }
 }
 
-fn step(
-    mut controller: NetworkController,
-    event: Event,
-) -> Box<Future<Item = NetworkController, Error = Error> + Send> {
+async fn step(controller: &mut NetworkController, event: Event) -> Result<(), Error> {
     match event {
         Event::Connect {
             server,
@@ -102,31 +88,26 @@ fn step(
                 .expect("Failed to send message to UI");
         }
         Event::SendMessage(message) => {
-            if let Some(fchat_tx) = controller.fchat_tx.take() {
-                let future = fchat_tx
-                    .send(message)
-                    .map_err(Error::from)
-                    .and_then(|sink| {
-                        controller.fchat_tx = Some(sink);
-                        Ok(controller)
-                    });
-                return Box::new(future);
+            if let Some(ref mut fchat_tx) = controller.fchat_tx {
+                fchat_tx.send(message).await?;
             } else {
                 panic!("Tried to send message, but not connected to the server")
             }
         }
     }
-    Box::new(futures::future::ok(controller))
+    Ok(())
 }
 
 pub fn start() -> Result<(), Error> {
-    let (event_tx, event_rx) = futures::sync::mpsc::unbounded();
+    let (event_tx, mut event_rx) = futures::channel::mpsc::unbounded();
     let ui_sender = ui::start(event_tx.clone());
-    let controller = NetworkController::new(ui_sender, event_tx);
-    let future = event_rx
-        .map_err(|_| format_err!("event_rx error"))
-        .fold(controller, step)
-        .then(|_| Ok(()));
-    tokio::run(future);
-    Ok(())
+    let mut controller = NetworkController::new(ui_sender, event_tx);
+    let future = async {
+        while let Some(event) = event_rx.next().await {
+            step(&mut controller, event).await?;
+        }
+        Ok(())
+    };
+    let mut runtime = tokio::runtime::Runtime::new()?;
+    runtime.block_on(future)
 }
