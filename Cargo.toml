@@ -2,7 +2,7 @@
 authors = ["Effnote <effnote@gmail.com>"]
 name = "rsfchat"
 version = "0.0.2"
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 chrono = "0.4.10"
@@ -10,11 +10,11 @@ cursive = "0.20.0"
 serde = "1.0.103"
 futures = "0.3.1"
 derive_more = "0.99.18"
+tokio-stream = "0.1.15"
 
 [dependencies.tokio]
-version = "0.2.2"
-features = ["time", "sync", "stream"]
+version = "1.38.0"
+features = ["full"]
 
 [dependencies.fchat]
 git = "https://github.com/effnote/libfchat"
-branch = "tokio2"

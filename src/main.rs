@@ -1,8 +1,9 @@
 mod error;
 mod io;
 mod ui;
-pub use error::Error;
 
-fn main() {
-    io::start().unwrap();
+#[tokio::main]
+pub async fn main() {
+    let mut siv = ui::init().await;
+    siv.run();
 }
