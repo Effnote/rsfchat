@@ -1215,7 +1215,6 @@ dependencies = [
  "derive_more",
  "fchat",
  "futures",
- "serde",
  "tokio",
  "tokio-stream",
 ]
