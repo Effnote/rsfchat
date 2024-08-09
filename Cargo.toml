@@ -6,10 +6,16 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4.10"
-cursive = "0.20.0"
 futures = "0.3.1"
-derive_more = "0.99.18"
 tokio-stream = "0.1.15"
+ratatui-image = { version = "1.0.5", features = ["crossterm"] }
+ratatui = { version = "0.28.0", features = ["unstable-widget-ref"] }
+better-panic = "0.3.0"
+miette = { version = "7.2.0", features = ["fancy"] }
+clap = { version = "4.5.13", features = ["derive"] }
+crossterm = { version = "0.28.0", features = ["event-stream"] }
+textwrap = "0.16.1"
+unicode-segmentation = "1.11.0"
 
 [dependencies.tokio]
 version = "1.38.0"
