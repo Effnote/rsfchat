@@ -1,25 +1,45 @@
-use miette::IntoDiagnostic;
-use tui::Tui;
+use app::App;
+use std::time::{Duration, Instant};
+use tokio::sync::mpsc::error::TryRecvError;
 
 mod app;
-mod connection;
-mod tui;
+mod io;
 mod widgets;
 
 fn main() {
     std::panic::set_hook(Box::new(|panic_info| {
-        tui::quit().unwrap();
         better_panic::Settings::auto().create_panic_handler()(panic_info);
     }));
-    if let Err(error) = run() {
-        tui::quit().unwrap();
-        println!("{:?}", error);
+    let terminal = ratatui::init();
+    let run_result = run(terminal);
+    ratatui::restore();
+    if let Err(error) = run_result {
+        eprintln!("{:?}", error);
     }
 }
 
-fn run() -> miette::Result<()> {
-    let tui = Tui::new().into_diagnostic()?;
-    let runtime = tokio::runtime::Runtime::new().into_diagnostic()?;
-    runtime.block_on(app::run(tui))?;
+fn run(mut terminal: ratatui::DefaultTerminal) -> miette::Result<()> {
+    let (request_sender, mut event_stream) = io::start()?;
+    let mut app = App::new(request_sender);
+    while !app.should_quit {
+        app.draw(&mut terminal).unwrap();
+        let timeout = Instant::now() + Duration::from_millis(500);
+        let Some(event) = event_stream.blocking_recv() else {
+            break;
+        };
+        app.event(event);
+        // Keep processing until there are no more events in the queue, or the timeout has been hit.
+        // The timeout makes sure that we don't get stuck for too long without redrawing.
+        loop {
+            match event_stream.try_recv() {
+                Ok(event) => app.event(event),
+                Err(TryRecvError::Empty) => break,
+                Err(TryRecvError::Disconnected) => miette::bail!("Event stream disconnected."),
+            }?;
+            if Instant::now() > timeout {
+                break;
+            }
+        }
+    }
     Ok(())
 }
