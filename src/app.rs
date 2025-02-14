@@ -3,9 +3,8 @@ use crossterm::event::{Event, KeyEvent};
 use fchat::{ClientMessage, ServerMessage, Ticket};
 use miette::IntoDiagnostic;
 use ratatui::{
-    style::Stylize,
     text::Text,
-    widgets::{List, ListState, Paragraph, Widget},
+    widgets::{List, ListState, Paragraph},
     DefaultTerminal,
 };
 use ratatui_macros::vertical;
@@ -14,7 +13,7 @@ use std::io;
 use tokio::sync::mpsc::{Sender, UnboundedReceiver};
 use tui_prompts::{FocusState, Prompt, State, TextPrompt, TextRenderStyle, TextState};
 
-use crate::io::RequestSender;
+use crate::io::ChatController;
 use crate::widgets::{TextArea, TextAreaState};
 
 pub type EventStream = UnboundedReceiver<AppEvent>;
@@ -23,7 +22,7 @@ pub struct App {
     state: AppScreen,
     needs_redraw: bool,
     pub should_quit: bool,
-    request_sender: RequestSender,
+    chat_controller: ChatController,
     character: String,
     debug_data: AllocRingBuffer<String>,
     sender: Option<Sender<ClientMessage>>,
@@ -31,7 +30,7 @@ pub struct App {
 }
 
 impl App {
-    pub fn new(request_sender: RequestSender) -> Self {
+    pub fn new(chat_controller: ChatController) -> Self {
         App {
             state: AppScreen::Login {
                 focus: 0,
@@ -40,7 +39,7 @@ impl App {
             },
             needs_redraw: true,
             should_quit: false,
-            request_sender,
+            chat_controller,
             character: String::new(),
             debug_data: AllocRingBuffer::new(16),
             sender: None,
@@ -168,12 +167,9 @@ impl App {
                 AppScreen::Login {
                     username, password, ..
                 } => {
-                    let _ = self
-                        .request_sender
-                        .blocking_send(crate::io::IoRequest::GetTicket {
-                            username: username.value().to_owned(),
-                            password: password.value().to_owned(),
-                        });
+                    let username = username.value().to_owned();
+                    let password = password.value().to_owned();
+                    let _ = self.chat_controller.get_ticket(username, password);
                 }
                 AppScreen::Characters { ticket, list_state } => {
                     let Some(selected) = list_state.selected() else {
@@ -181,9 +177,7 @@ impl App {
                     };
                     let character = ticket.characters[selected].clone();
                     let ticket = ticket.clone();
-                    let _ = self
-                        .request_sender
-                        .blocking_send(crate::io::IoRequest::Connect { ticket, character });
+                    let _ = self.chat_controller.connect(ticket, character);
                 }
                 AppScreen::Chat { text_state, .. } => text_state.event(&Event::Key(event)),
             },

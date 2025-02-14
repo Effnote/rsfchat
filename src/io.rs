@@ -11,6 +11,26 @@ use tokio::time::interval;
 
 use crate::app::{AppError, AppEvent, EventStream};
 
+pub struct ChatController {
+    sender: Sender<IoRequest>,
+}
+
+impl ChatController {
+    pub fn get_ticket(&self, username: String, password: String) {
+        self.send(IoRequest::GetTicket { username, password });
+    }
+
+    pub fn connect(&self, ticket: Ticket, character: String) {
+        self.send(IoRequest::Connect { ticket, character });
+    }
+
+    fn send(&self, request: IoRequest) {
+        self.sender
+            .blocking_send(request)
+            .expect("ChatController: IoRequest send failed");
+    }
+}
+
 pub type RequestSender = Sender<IoRequest>;
 
 pub enum IoRequest {
@@ -18,7 +38,7 @@ pub enum IoRequest {
     Connect { ticket: Ticket, character: String },
 }
 
-pub fn start() -> miette::Result<(RequestSender, EventStream)> {
+pub fn start() -> miette::Result<(ChatController, EventStream)> {
     let (event_sender, event_receiver) = unbounded_channel();
     let (request_sender, mut request_receiver) = channel(16);
     std::thread::Builder::new()
@@ -80,7 +100,10 @@ pub fn start() -> miette::Result<(RequestSender, EventStream)> {
             });
         })
         .into_diagnostic()?;
-    Ok((request_sender, event_receiver))
+    let controller = ChatController {
+        sender: request_sender,
+    };
+    Ok((controller, event_receiver))
 }
 
 async fn connect(

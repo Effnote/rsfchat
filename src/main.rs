@@ -19,15 +19,15 @@ fn main() {
 }
 
 fn run(mut terminal: ratatui::DefaultTerminal) -> miette::Result<()> {
-    let (request_sender, mut event_stream) = io::start()?;
-    let mut app = App::new(request_sender);
+    let (connection, mut event_stream) = io::start()?;
+    let mut app = App::new(connection);
     while !app.should_quit {
         app.draw(&mut terminal).unwrap();
         let timeout = Instant::now() + Duration::from_millis(500);
         let Some(event) = event_stream.blocking_recv() else {
             break;
         };
-        app.event(event);
+        app.event(event).unwrap();
         // Keep processing until there are no more events in the queue, or the timeout has been hit.
         // The timeout makes sure that we don't get stuck for too long without redrawing.
         loop {

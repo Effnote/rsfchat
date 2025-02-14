@@ -8,19 +8,19 @@ edition = "2021"
 chrono = "0.4.38"
 futures = "0.3.30"
 tokio-stream = { version = "0.1.16", features = ["time"] }
-ratatui-image = { version = "1.0.5", features = ["crossterm"] }
-ratatui = { version = "0.28.1", features = ["unstable-widget-ref"] }
+ratatui-image = { version = "4.2.0", features = ["crossterm"] }
+ratatui = { version = "0.29.0", features = ["unstable-widget-ref"] }
 better-panic = "0.3.0"
 miette = { version = "7.2.0", features = ["fancy"] }
 clap = { version = "4.5.17", features = ["derive"] }
 crossterm = { version = "0.28.1", features = ["bracketed-paste", "event-stream"] }
 textwrap = "0.16.1"
 unicode-segmentation = "1.11.0"
-ratatui-macros = "0.5.0"
+ratatui-macros = "0.6.0"
 tokio-util = "0.7.12"
 ringbuffer = "0.15.0"
 crokey = "1.1.0"
-tui-prompts = "0.4.0"
+tui-prompts = "0.5.0"
 
 [dependencies.tokio]
 version = "1.40.0"
