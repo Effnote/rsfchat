@@ -3,9 +3,9 @@ use crossterm::event::{Event, KeyEvent};
 use fchat::{ClientMessage, ServerMessage, Ticket};
 use miette::IntoDiagnostic;
 use ratatui::{
+    DefaultTerminal,
     text::Text,
     widgets::{List, ListState, Paragraph},
-    DefaultTerminal,
 };
 use ratatui_macros::vertical;
 use ringbuffer::{AllocRingBuffer, RingBuffer};
@@ -118,7 +118,7 @@ impl App {
                     return Ok(());
                 };
                 match &mut self.state {
-                    AppScreen::Login { focus, .. } => {
+                    AppScreen::Login { .. } => {
                         self.state = AppScreen::Characters {
                             ticket,
                             list_state: ListState::default(),

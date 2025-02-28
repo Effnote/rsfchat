@@ -2,11 +2,11 @@ use std::time::Duration;
 
 use fchat::{self, ClientMessage, Server, ServerMessage, Ticket};
 
-use futures::{prelude::*, StreamExt};
+use futures::{StreamExt, prelude::*};
 
 use miette::IntoDiagnostic;
 use stream::TryStreamExt;
-use tokio::sync::mpsc::{channel, unbounded_channel, Sender};
+use tokio::sync::mpsc::{Sender, channel, unbounded_channel};
 use tokio::time::interval;
 
 use crate::app::{AppError, AppEvent, EventStream};
